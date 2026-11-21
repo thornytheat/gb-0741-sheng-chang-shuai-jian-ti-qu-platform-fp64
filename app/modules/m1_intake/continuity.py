@@ -8,9 +8,35 @@ def issue(line, hz, code, raw):
     return {'line': line, 'band_hz': hz, 'raw': raw, **reason(code)}
 
 
+def spans(lines):
+    """Compress sorted source lines into inclusive ranges."""
+    ranges = []
+    for line in sorted(lines):
+        if ranges and line == ranges[-1][1] + 1:
+            ranges[-1][1] = line
+        else:
+            ranges.append([line, line])
+    return ranges
+
+
+def between(index, indices, by_index):
+    """Source lines of the nearest present samples on either side of a gap.
+
+    A gap has no row of its own; the citation is the pair of physical lines
+    that bracket it, so a reviewer can confirm the omission in the original.
+    """
+    before = [value for value in indices if value < index]
+    after = [value for value in indices if value > index]
+    return {'index': index,
+            'before_line': by_index[before[-1]][0].line if before else None,
+            'after_line': by_index[after[0]][0].line if after else None}
+
+
 def check_band(hz, rows, invalid_rows):
     if not rows:
-        return None, {'band_hz': hz, 'findings': [{**reason('ROW_ISOLATED'), 'lines': invalid_rows}]}, [], 0
+        return None, {'band_hz': hz, 'sample_count': 0, 'blocked_rows': len(invalid_rows),
+                      'blocked_lines': sorted(invalid_rows), 'line_spans': [],
+                      'findings': [{**reason('ROW_ISOLATED'), 'lines': sorted(invalid_rows)}]}, [], 0
     first, first_sample = rows[0]
     configs = {}
     by_index = defaultdict(list)
@@ -36,11 +62,17 @@ def check_band(hz, rows, invalid_rows):
     extra = [index for index in indices if index >= first.expected]
     missing = [index for index in range(min(indices[-1] + 1, first.expected)) if index not in by_index]
     if extra:
-        findings.append({**reason('EXTRA_POINTS'), 'indices': extra[:20], 'count': len(extra)})
+        findings.append({**reason('EXTRA_POINTS'), 'indices': extra[:20], 'count': len(extra),
+                         'lines': sorted(sample.line for index in extra for sample in by_index[index])})
     if missing:
-        findings.append({**reason('MISSING_POINTS'), 'indices': missing[:20], 'count': len(missing)})
+        findings.append({**reason('MISSING_POINTS'), 'indices': missing[:20], 'count': len(missing),
+                         'gaps': [between(index, indices, by_index) for index in missing[:20]]})
     if indices[-1] < first.expected - 1:
-        findings.append({**reason('TRUNCATED_BAND'), 'from_index': indices[-1] + 1, 'to_index': first.expected - 1})
+        findings.append({**reason('TRUNCATED_BAND'), 'from_index': indices[-1] + 1, 'to_index': first.expected - 1,
+                         'after_line': max(sample.line for _, sample in rows)})
     if findings:
-        return None, {'band_hz': hz, 'sample_count': len(rows), 'first_line': first_sample.line, 'findings': findings}, [], len(rows)
+        return None, {'band_hz': hz, 'sample_count': len(rows), 'blocked_rows': len(invalid_rows),
+                      'blocked_lines': sorted(invalid_rows), 'line_spans': spans(sample.line for _, sample in rows),
+                      'first_line': first_sample.line, 'last_line': max(sample.line for _, sample in rows),
+                      'findings': findings}, [], len(rows)
     return Band(hz, first, accepted), None, duplicates, 0

@@ -2,9 +2,9 @@ import {draw} from './curve.js';
 import * as panels from './panels.js';
 
 const {$, fixed} = panels;
-const state = {result: null, manifest: null, band: 500, cursor: null, source: null, busy: false, view: 'decay'};
+const state = {result: null, manifest: null, package: null, band: 500, cursor: null, source: null, busy: false, view: 'decay'};
 const nav = [...document.querySelectorAll('nav a')];
-const auxiliary = ['intake', 'calibration', 'archive'];
+const auxiliary = ['intake', 'calibration', 'archive', 'package'];
 
 async function request(path, options) {
   const response = await fetch(path, options);
@@ -103,13 +103,20 @@ async function loadHistory() {
     const archived = await request(`/api/runs/${id}`);
     $('sample').value = 'custom';
     render(archived.result, archived.manifest);
+    await loadPackage();
     await loadHistory();
   }));
+}
+
+async function loadPackage() {
+  state.package = state.manifest ? await request(`/api/runs/${state.manifest.id}/package`) : null;
+  panels.packagePanel(state.package);
 }
 
 async function archive(spec) {
   const body = await request('/api/runs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(spec)});
   render(body.result, body.manifest);
+  await loadPackage();
   if (state.view === 'archive') await loadHistory();
   feedback(body.reused ? '已复用该批次' : '提取完成，已归档');
 }
@@ -127,6 +134,7 @@ function switchView() {
   for (const name of auxiliary) $(name).hidden = name !== state.view;
   if (hash === state.view) $(hash).scrollIntoView({block: 'nearest'});
   if (state.view === 'archive') loadHistory().catch((error) => feedback(error.message, true));
+  if (state.view === 'package') loadPackage().catch((error) => feedback(error.message, true));
 }
 
 $('run-form').addEventListener('submit', (event) => {
@@ -147,6 +155,7 @@ $('rerun').addEventListener('click', () => act(async () => {
   const id = state.manifest.id;
   const run = await request(`/api/runs/${id}/rerun`, {method: 'POST'});
   render(run.result, run.manifest);
+  await loadPackage();
   await loadHistory();
   feedback('重跑一致，已复用该批次');
 }));

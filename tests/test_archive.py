@@ -42,9 +42,10 @@ def test_export_is_attachment_and_digest_verified(client, raw):
     reply = client.get(f"/api/runs/{info['id']}/export")
     assert reply.headers['content-disposition'].startswith('attachment;')
     result = reply.json()
-    assert result['manifest']['source_id'] == sha256(raw)
-    assert result['manifest']['digest'] == sha256(canonical(result['result']))
-    assert result['result']['reconcile']['totals']['flagged'] == 1
+    assert result['source']['source_id'] == sha256(raw)
+    assert result['archive']['result_digest'] == info['manifest']['digest']
+    assert result['conclusion']['reconcile']['totals']['flagged'] == 1
+    assert reply.headers['x-evidence-digest'] == result['digest']
 
 
 def test_corrupt_digest_blocks_export_and_rerun(client):

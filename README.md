@@ -7,7 +7,13 @@ docker compose up --build
 docker compose exec -T app pytest -q
 ```
 
-打开 [工作台](http://localhost:18430/) 或 [接口文档](http://localhost:18430/docs)。首页先展示礼堂样例预览。「运行提取」归档当前来源，「中心频率」联动曲线与拟合区间，「定位采样点」显示秒数、相对 dB 与来源行。「复测归档」可打开历史结果和重跑，顶部「导出证据」保存一份 JSON。可切换 GB18030 参考样例或在「脉冲响应收件」上传响应 CSV。
+打开 [工作台](http://localhost:18430/) 或 [接口文档](http://localhost:18430/docs)。首页先展示礼堂样例预览。「运行提取」归档当前来源，「中心频率」联动曲线与拟合区间，「定位采样点」显示秒数、相对 dB 与来源行。「复测归档」可打开历史结果和重跑，顶部「导出证据」保存一份 JSON。「复核交付包」展示包内带了什么并向第三方导出最小可复算证据集。可切换 GB18030 参考样例或在「脉冲响应收件」上传响应 CSV。
+
+交付包不带整段原始录音：只含采信点的来源行与振幅，被挡记录只给行号与原因。复核方无需原系统即可重算，见 [数据定义](docs/DATA-DICTIONARY.md) 的「复核交付包」。离线核对：
+
+```bash
+python -m app.modules.m7_archive.bundle hall-decay-<批次>.json
+```
 
 ### 本地运行
 
@@ -32,5 +38,6 @@ SQLite 使用 Compose 命名卷 `measurements`。应用启动按内容摘要幂�
 | 噪声判废 | `GET /api/noise/{source_id}` | 测噪区间和动态范围 |
 | 频段勾稽 | `GET /api/reconcile/{source_id}` | 频带、采样行守恒和拟合标差 |
 | 复测归档 | `POST /api/runs`、`POST /api/runs/{id}/rerun` | 批次、摘要、复测与附件 |
+| 复核交付包 | `GET /api/runs/{id}/export`、`GET /api/runs/{id}/package` | 最小可复算证据集与入包清单 |
 
 [数据定义](docs/DATA-DICTIONARY.md)说明输入限制和计算边界。[深度登记](docs/DEPTH.md)列出样例与对应测试。

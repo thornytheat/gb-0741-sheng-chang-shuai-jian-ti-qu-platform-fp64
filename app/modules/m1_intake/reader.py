@@ -30,6 +30,7 @@ def read(content):
     valid, invalid = defaultdict(list), defaultdict(list)
     issues = []
     counts = dict(input=0, accepted=0, isolated=0, duplicate=0, blank=0, repeated_headers=0)
+    blank_lines, repeated_header_lines = [], []
     header = None
     try:
         while True:
@@ -50,9 +51,11 @@ def read(content):
                 raise Problem('TOO_MANY_ROWS', '记录超过 100000 条', 413)
             if not any(normalized):
                 counts['blank'] += 1
+                blank_lines.append(line)
                 continue
             if normalized == header:
                 counts['repeated_headers'] += 1
+                repeated_header_lines.append(line)
                 continue
             offset = header.index('band_hz')
             hz = band_hz(record[offset]) if len(record) > offset else None
@@ -85,4 +88,5 @@ def read(content):
             counts['isolated'] += rejected_count
         issues.extend(duplicates)
         counts['duplicate'] += len(duplicates)
-    return Intake(bands, rejected, sorted(issues, key=lambda item: item['line']), counts, encoding)
+    return Intake(bands, rejected, sorted(issues, key=lambda item: item['line']), counts, encoding,
+                  {'blank': blank_lines, 'repeated_headers': repeated_header_lines})

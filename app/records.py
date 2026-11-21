@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 
 
@@ -37,6 +37,7 @@ class Intake:
     row_issues: list[dict]
     counts: dict
     encoding: str
+    excluded_lines: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

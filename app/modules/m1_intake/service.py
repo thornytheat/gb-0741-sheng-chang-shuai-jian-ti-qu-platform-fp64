@@ -4,11 +4,28 @@ from app.evidence import sha256
 from app.modules.m1_intake.reader import read
 
 
+CITATION_KEYS = ('line', 'band_hz', 'code', 'message', 'lines', 'index', 'indices', 'count',
+                 'from_index', 'to_index', 'blocked_lines', 'sample_count', 'blocked_rows',
+                 'first_line', 'last_line', 'gaps', 'after_line')
+
+
+def citation(finding):
+    """A finding that cites original lines without copying excluded row contents.
+
+    Conflicting amplitudes are deliberately not copied: the citation names both
+    lines, the reviewer resolves them against the original recording.
+    """
+    return {key: finding[key] for key in CITATION_KEYS if key in finding}
+
+
 def summary(source_id, data):
     return {'source_id': source_id, 'encoding': data.encoding, 'counts': data.counts,
             'bands': [{'band_hz': band.hz, 'calibration': band.calibration.public(),
                        'first_line': band.samples[0].line, 'last_line': band.samples[-1].line} for band in data.bands],
-            'isolated_bands': data.rejected_bands, 'row_issues': data.row_issues}
+            'isolated_bands': [citation(row) | {'findings': [citation(finding) for finding in row['findings']]}
+                               for row in data.rejected_bands],
+            'row_issues': [citation(row) for row in data.row_issues],
+            'excluded_lines': data.excluded_lines}
 
 
 def save_source(store, content):

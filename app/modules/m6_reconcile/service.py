@@ -1,5 +1,6 @@
 from collections import Counter
 
+from app.modules.m1_intake.service import citation
 from app.modules.m3_decay.service import decay
 from app.modules.m4_fit.service import fits
 from app.modules.m6_reconcile.comparison import DISAGREEMENT_LIMIT, compare
@@ -7,7 +8,8 @@ from app.modules.m6_reconcile.comparison import DISAGREEMENT_LIMIT, compare
 
 def reconcile(data, fitted):
     rows = [compare(row) for row in fitted['bands']]
-    rows.extend({**row, 'status': 'ISOLATED', 't20_s': None, 't30_s': None, 'relative_gap': None, 'gap_flag': None}
+    rows.extend({**citation(row), 'status': 'ISOLATED', 't20_s': None, 't30_s': None, 'relative_gap': None,
+                 'gap_flag': None, 'findings': [citation(finding) for finding in row['findings']]}
                 for row in data.rejected_bands)
     rows.sort(key=lambda row: row['band_hz'])
     totals = Counter(row['status'] for row in rows)

@@ -32,4 +32,18 @@
 
 归档记录由源文件原字节摘要和规则版本定位。运行清单含 UTC 创建时间、耗时与证据摘要。重跑读原始文件、重算并校验结果。导出保留采信与隔离、校准、图表点、回归系数和窗口、噪声与勾稽结论。
 
+## 复核交付包
+
+验收后交第三方复核的是**最小可复算证据集**，不是原始收件。包格式 `hall-decay-evidence/1`，由 `GET /api/runs/{id}/export` 下载，`GET /api/runs/{id}/package` 供工作台预览（不含采信振幅）。
+
+- 只带重算所需的采信频带：校准元组（采样率、声明长度、单位、增益、灵敏度）与每个采信点的来源行号 `lines`、规范化振幅 `amplitudes`。据此可独立重算曲线、拟合、噪声与勾稽。
+- 被挡记录只保留来源行号、行段、采样数与排除原因码；**不复制任何未采信行的振幅原文**（矛盾振幅也不随包带出），复核方按行号回原档核对。缺点不与记录等长，故缺采样点给 `gaps`：缺口两侧最近采信点的 `before_line` / `after_line`。
+- `intake` 段保留归档的收件计数、被挡频带与行号。`scope` 段显式说明带了什么：`carries_raw_recording: false`、采信频带与点数、被挡行数、空白行与重复表头行号、`contents_included: false`。
+- `conclusion` 段为紧凑结论（每带状态、T20/T30、标差、噪声深度、勾稽汇总），供人眼核对；完整图表曲线不随包发。
+- `archive.result_digest` 为归档证据摘要；`digest` 为整包摘要（去掉 `digest` 自身后规范化计算）；导出响应头 `X-Evidence-Digest` 同值。
+- `checks.recomputed_matches_archive` 在打包时已用包内数据重算整份结果并与归档摘要比对，不一致即拒绝出包。复核方重算应逐一命中 `archive.result_digest`。
+- 不带存储即可独立复核：`python -m app.modules.m7_archive.bundle <证据包.json>`，输出 `recomputed_matches_archive`、`conclusion` 与勾稽汇总；退出码非零表示不一致或已失效。
+
+同一归档重复打包逐字节相同，不新增记录；重跑按 `source_id + 规则版本` 幂等复用。规则版本更新后，旧包仍可下载，但 `valid: false`、`stale.code = RULE_VERSION_CHANGED`、`scope.recomputable = false`，不再随包带采信振幅，也不冒充当前规则的重算结果，须按当前规则重跑后再交付。
+
 当前接收完成分带的序列，未实现宽带滤波、混响室或标准的合规认证。尾段噪声按平稳模型估计，存在持续背景变化时应使用测量设备的复测结果复核。

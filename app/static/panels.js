@@ -133,3 +133,45 @@ export function history(runs, current, pick) {
     row.elapsed_ms, action(row.digest.slice(0, 12), () => evidence('运行清单', row)),
   ]), runs.findIndex((row) => row.id === current));
 }
+
+export function packagePanel(view) {
+  if (!view) {
+    $('package-summary').replaceChildren(el('p', '归档后生成最小可复算证据包', 'empty'));
+    $('package-bands').replaceChildren();
+    $('package-validity').textContent = '—';
+    $('package-export').removeAttribute('href'); $('package-export').setAttribute('aria-disabled', 'true');
+    return;
+  }
+  const scope = view.scope;
+  const link = $('package-export');
+  link.href = `/api/runs/${view.archive.run_id}/export`;
+  link.removeAttribute('aria-disabled');
+  $('package-validity').textContent = view.valid
+    ? `有效 · ${view.rule_version} · 摘要 ${view.digest.slice(0, 12)}`
+    : `失效 · ${view.stale?.message ?? '规则版本不同'}`;
+  $('package-validity').className = view.valid ? 'muted good' : 'muted bad';
+  const contract = view.contract;
+  const totals = view.conclusion?.reconcile?.totals;
+  $('package-summary').replaceChildren(
+    el('p', scope.included.note, 'muted'),
+    specs([
+      ['包格式', view.format], ['规则版本', view.rule_version],
+      ['原始录音入包', scope.carries_raw_recording ? '是' : '否'],
+      ['可重算', scope.recomputable ? '是' : '否'],
+      ['携带频带', `${scope.included.bands.length} 个 / ${scope.included.samples} 点`],
+      ['被挡记录', `${scope.excluded.rows} 行（不携原文）`],
+      ['频带勾稽', totals ? `${totals.bands} 带 · 差额 ${totals.band_difference} · 标差 ${totals.flagged}` : '—'],
+      ['包摘要', view.digest],
+      ['归档结果摘要', view.archive.result_digest],
+      ['T20 / T30 区间', `${contract.t20_db.join(' ~ ')} dB / ${contract.t30_db.join(' ~ ')} dB`],
+    ]),
+    el('p', `被挡行号：${scope.excluded.bands.map((band) => `${band.band_hz} Hz ${band.reason_codes.join('/')}`).join('；') || '无'}；空白 ${scope.excluded.blank_lines.join('、') || '无'}；重复表头 ${scope.excluded.repeated_header_lines.join('、') || '无'}`, 'muted'),
+  );
+  table('package-bands', ['Hz', '入包', '判定', '采样点', '来源行', '排除原因'], view.bands.map((row) => [
+    action(`${row.band_hz}`, () => evidence(`${row.band_hz} Hz 入包证据`, row)),
+    row.included ? el('span', '采信', 'status-label good') : el('span', '仅引用', 'status-label bad'),
+    states[row.status]?.[0] ?? '—', row.sample_count ?? '—',
+    row.first_line != null ? `${row.first_line}–${row.last_line}` : '—',
+    row.included ? '—' : (row.findings ?? []).map((finding) => finding.code).join('、') || '—',
+  ]));
+}

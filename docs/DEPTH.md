@@ -13,7 +13,7 @@
 | M4 拟合时段 | 读取 T20 与 T30 时间窗、回归系数及质量 | `GET /api/fit/{source_id}` | `app/modules/m4_fit/windows.py` `app/modules/m4_fit/regression.py` | `tests/test_fit.py` |
 | M5 噪声判废 | 核对尾段噪声和两档动态范围 | `GET /api/noise/{source_id}` | `app/modules/m5_noise/gate.py` | `tests/test_noise.py` |
 | M6 频段勾稽 | 对频带和采样行勾稽，查看双档差异 | `GET /api/reconcile/{source_id}` | `app/modules/m6_reconcile/service.py` `app/modules/m6_reconcile/comparison.py` | `tests/test_reconcile.py` |
-| M7 复测归档 | 保存证据、重跑原输入并下载 | `POST /api/runs` | `app/modules/m7_archive/service.py` `app/modules/m7_archive/export.py` | `tests/test_archive.py` |
+| M7 复测归档 | 保存证据、重跑原输入并下载 | `POST /api/runs` | `app/modules/m7_archive/service.py` `app/modules/m7_archive/bundle.py` `app/modules/m7_archive/export.py` | `tests/test_archive.py` `tests/test_bundle.py` |
 
 ## 陷阱登记
 
@@ -33,6 +33,10 @@
 | TRAP-18 | 零字节、全空与仅表头 | 记录空结果为成功 | 返回独立的文件级原因 | `app/modules/m1_intake/reader.py` | `tests/test_intake.py::test_empty_cases_raise_distinct_codes` |
 | TRAP-19 | 测试中一个低块夹在可用区间 | 瞬态低块误判整个尾段 | 连续两块才截断 | `app/modules/m5_noise/gate.py` | `tests/test_noise.py::test_consecutive_low_blocks_cut_at_first_block` |
 | TRAP-23 | 测试曲线阈值等于样本值 | 跳过等号或将越界点纳入 | 明确交点与回归右端排除 | `app/modules/m4_fit/windows.py` | `tests/test_fit.py::test_threshold_crossing_interpolates_and_has_exclusive_stop` |
+| TRAP-24 | 交付包直接塞整段原始收件 | 未采信行原文随包外流，包体与录音同量级 | 只带采信点与行号；被挡行仅引用 | `app/modules/m7_archive/bundle.py` | `tests/test_bundle.py::test_package_is_minimal_recomputable_set_not_raw_intake` |
+| TRAP-25 | 被挡记录只给计数不回行 | 复核方无法回原档核对 | 保留来源行、行段与原因码 | `app/modules/m1_intake/continuity.py` `app/modules/m7_archive/bundle.py` | `tests/test_bundle.py::test_blocked_rows_and_reasons_cite_lines_without_contents` |
+| TRAP-26 | 打包时用当前解析冒充归档 | 旧结论被悄悄替换 | 包内重算与归档摘要比对，不一致拒绝出包 | `app/modules/m7_archive/bundle.py` | `tests/test_bundle.py::test_independent_recompute_from_json_matches_archive` |
+| TRAP-27 | 规则升级后旧包仍显示有效 | 复核方重算出不同结论 | 标 `RULE_VERSION_CHANGED` 并置 `valid: false` | `app/modules/m7_archive/bundle.py` | `tests/test_bundle.py::test_old_rule_version_package_is_marked_stale` |
 
 ## 对账断言
 

@@ -19,7 +19,7 @@
       <span class="nav-group">分析</span>
       <a href="#decay" aria-current="page">能量衰减</a><a href="#fit">拟合时段</a><a href="#noise">噪声判废</a><a href="#reconcile">频段勾稽</a>
       <span class="nav-group">留档</span>
-      <a href="#archive">复测归档</a>
+      <a href="#archive">复测归档</a><a href="#package">复核交付包</a>
     </nav>
     <div class="rail-foot"><span class="dot"></span><div>规则版本<small>{{ version }}</small></div></div>
   </aside>
@@ -57,6 +57,7 @@
         <section class="panel" id="intake" hidden><div class="panel-head"><h2>脉冲响应收件</h2><span class="muted">CSV</span></div><div class="body"><form id="upload"><label>上传响应<input type="file" name="file" accept=".csv,text/csv" required></label><button type="submit" class="button">收件并分析</button></form><div id="intake-data"></div></div><div id="intake-issues" class="table-wrap"></div></section>
         <section class="panel" id="calibration" hidden><div class="panel-head"><h2>量纲校准</h2><span class="muted">Pa</span></div><div id="calibration-data" class="table-wrap"></div></section>
         <section class="panel" id="archive" hidden><div class="panel-head"><h2>复测归档</h2><button class="button" type="button" id="rerun" disabled>重跑归档</button></div><div id="run-list" class="table-wrap"></div></section>
+        <section class="panel" id="package" hidden><div class="panel-head"><div><h2>复核交付包</h2><span class="muted" id="package-validity">—</span></div><a id="package-export" class="button" aria-disabled="true">导出证据包</a></div><div class="body" id="package-summary"><p class="empty">归档后生成最小可复算证据包</p></div><div id="package-bands" class="table-wrap"></div></section>
       </div>
     </main>
     <footer class="statusbar"><span><i class="dot"></i><span id="status">等待运行</span></span><a href="/docs">接口文档</a></footer>

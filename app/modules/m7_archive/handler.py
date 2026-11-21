@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from app.errors import Problem
 from app.modules.m1_intake.service import sample_source
-from app.modules.m7_archive import repository, service
+from app.modules.m7_archive import bundle, repository, service
 from app.modules.m7_archive.export import attachment
 from app.store import Store, get_store
 
@@ -42,3 +42,18 @@ def rerun(run_id: str, store: Store = Depends(get_store)):
 @router.get('/{run_id}/export')
 def export(run_id: str, store: Store = Depends(get_store)):
     return attachment(store, run_id)
+
+
+@router.get('/{run_id}/package')
+def package(run_id: str, store: Store = Depends(get_store)):
+    return bundle.preview(bundle.build(store, run_id))
+
+
+@router.post('/{run_id}/verify')
+def verify(run_id: str, payload: dict, store: Store = Depends(get_store)):
+    """Check a delivered package against itself and the archived conclusion."""
+    service.record(store, run_id)
+    report = bundle.check(payload)
+    if report['valid'] and not report['recomputed_matches_archive']:
+        raise Problem('EVIDENCE_CHANGED', '证据包重算结果与归档不一致', 409)
+    return report

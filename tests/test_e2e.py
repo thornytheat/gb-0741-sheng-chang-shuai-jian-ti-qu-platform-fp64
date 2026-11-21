@@ -10,7 +10,10 @@ def test_upload_to_all_stage_endpoints_and_archive(client):
     for stage in ('intake', 'calibration', 'decay', 'fit', 'noise', 'reconcile'):
         result = client.get(f'/api/{stage}/{source}')
         assert result.status_code == 200 and result.json() == run['result'][stage]
-    assert client.get(f"/api/runs/{run['id']}/export").json()['result'] == run['result']
+    package = client.get(f"/api/runs/{run['id']}/export").json()
+    assert package['archive']['result_digest'] == run['manifest']['digest']
+    assert package['conclusion']['reconcile']['totals'] == run['result']['reconcile']['totals']
+    assert package['checks']['recomputed_matches_archive']
 
 
 def test_home_serves_native_workbench_and_chart(client):

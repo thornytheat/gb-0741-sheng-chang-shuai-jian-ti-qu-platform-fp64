@@ -2,7 +2,7 @@ import sqlite3
 from datetime import datetime, timezone
 from time import perf_counter_ns
 
-from app.config import RULE_VERSION
+from app import config
 from app.errors import Problem
 from app.evidence import canonical, sha256
 from app.modules.m1_intake.service import load, summary
@@ -11,7 +11,7 @@ from app.modules.m7_archive import repository
 
 
 def key(source_id):
-    return sha256(canonical({'source_id': source_id, 'version': RULE_VERSION}))
+    return sha256(canonical({'source_id': source_id, 'version': config.RULE_VERSION}))
 
 
 def record(store, run_id):
@@ -29,7 +29,7 @@ def run(store, source_id):
     if result['reconcile']['status'] != 'MATCHED':
         raise Problem('UNBALANCED', '频带或数据行存在差额', 409)
     payload = canonical(result)
-    manifest = {'id': key(source_id), 'source_id': source_id, 'version': RULE_VERSION,
+    manifest = {'id': key(source_id), 'source_id': source_id, 'version': config.RULE_VERSION,
                 'created_at': datetime.now(timezone.utc).isoformat(timespec='microseconds'),
                 'elapsed_ms': (perf_counter_ns() - start) // 1_000_000, 'digest': sha256(payload)}
     try:
@@ -48,7 +48,7 @@ def run(store, source_id):
 def repeat(store, run_id):
     archive = record(store, run_id)
     manifest = archive['manifest']
-    if manifest['version'] != RULE_VERSION:
+    if manifest['version'] != config.RULE_VERSION:
         raise Problem('VERSION_CHANGED', '当前规则版本与归档不同', 409)
     if key(manifest['source_id']) != run_id:
         raise Problem('EVIDENCE_CHANGED', '归档来源与编号不符', 409)
